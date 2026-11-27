@@ -1,0 +1,6 @@
+{
+  "name": "Ezan Vaktim",
+  "description": "Diyanet uyumlu namaz vakitleri, canlı geri sayım, çevrimdışı önbellek ve özelleştirilebilir ezan/bildirim alarmları.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

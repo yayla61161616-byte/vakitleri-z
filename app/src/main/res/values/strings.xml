@@ -1,0 +1,66 @@
+<resources>
+    <string name="app_name">Ezan Vaktim</string>
+    <string name="nav_prayer_times">Vakitler</string>
+    <string name="nav_settings">Ayarlar</string>
+
+    <string name="prayer_imsak">İmsak</string>
+    <string name="prayer_gunes">Güneş</string>
+    <string name="prayer_ogle">Öğle</string>
+    <string name="prayer_ikindi">İkindi</string>
+    <string name="prayer_aksam">Akşam</string>
+    <string name="prayer_yatsi">Yatsı</string>
+
+    <string name="status_current_prayer">Şu Anki Vakit</string>
+    <string name="status_next_prayer">Sıradaki</string>
+    <string name="countdown_label_format">%1$s vaktine kalan süre</string>
+    <string name="countdown_tomorrow_format">Yarınki %1$s vaktine kalan süre</string>
+
+    <string name="action_select_location">Konum Seç</string>
+    <string name="action_refresh">Vakitleri Güncelle</string>
+    <string name="action_stop_sound">Çalan Sesi Durdur</string>
+    <string name="action_test_notification">Bildirimi Şimdi Test Et</string>
+    <string name="action_grant_permission">İzin Ver</string>
+    <string name="action_open_settings">Ayarları Aç</string>
+    <string name="action_back">Geri</string>
+
+    <string name="badge_offline_cache">Çevrimdışı Önbellek</string>
+    <string name="badge_diyanet_synced">Diyanet Uyumlu</string>
+    <string name="error_network_using_cache">İnternet bağlantısı yok. Kayıtlı son vakitler gösteriliyor.</string>
+    <string name="error_no_cached_data">Vakitler yüklenemedi. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.</string>
+
+    <string name="settings_permissions_title">İzinler ve Arka Plan Güvenilirliği</string>
+    <string name="settings_notification_perm_title">Bildirim İzni</string>
+    <string name="settings_notification_perm_desc_granted">Vakit girdiğinde bildirim gönderilebilir.</string>
+    <string name="settings_notification_perm_desc_denied">Vakit bildirimlerini görebilmek için izin vermelisiniz.</string>
+    <string name="settings_exact_alarm_title">Tam Zamanlı Alarm İzni</string>
+    <string name="settings_exact_alarm_desc_granted">Uygulama kapalıyken bile vakitler şaşmadan çalar.</string>
+    <string name="settings_exact_alarm_desc_denied">Telefon kilitliyken vakitlerin tam dakikasında çalması için izin verin.</string>
+
+    <string name="settings_sound_section_title">Ses ve Test</string>
+    <string name="sound_type_short">Kısa Bildirim Sesi</string>
+    <string name="sound_type_short_desc">Sistem varsayılan bildirim sesini çalar.</string>
+    <string name="sound_type_ezan">Ezan Sesi</string>
+    <string name="sound_type_ezan_desc">Yerleşik örnek ezan melodisini (veya özel ezan_ozel.mp3) çalar.</string>
+    <string name="sound_playing_banner">Ses çalınıyor…</string>
+
+    <string name="settings_prayer_toggles_title">Vakit Bildirimleri</string>
+    <string name="settings_prayer_toggles_subtitle">Her vakit için bildirimi ve alarmı ayrı ayrı yönetin.</string>
+
+    <string name="settings_custom_mp3_title">Özel Ezan MP3 Nasıl Eklenir?</string>
+    <string name="settings_custom_mp3_body">Kendi özel ezan dosyanızı app/src/main/res/raw/ezan_ozel.mp3 olarak eklediğinizde uygulama otomatik olarak o sesi çalar. Şu an ilk testte sorunsuz çalışması için yerleşik örnek ezan sesi bağlıdır.</string>
+
+    <string name="location_picker_title">Konum Seçimi</string>
+    <string name="location_step_country">Ülke</string>
+    <string name="location_step_city">Şehir</string>
+    <string name="location_step_district">İlçe</string>
+    <string name="location_search_hint">Ara (örn. İstanbul, Kadıköy)…</string>
+
+    <string name="notif_channel_ezan_name">Namaz Vakti Ezan Alarmları</string>
+    <string name="notif_channel_ezan_desc">Namaz vakti girdiğinde ezan sesiyle bildirim verir.</string>
+    <string name="notif_channel_short_name">Namaz Vakti Bildirimleri</string>
+    <string name="notif_channel_short_desc">Namaz vakti girdiğinde kısa bildirim sesiyle uyarır.</string>
+    <string name="notif_prayer_entered_title">%1$s Vakti Girdi</string>
+    <string name="notif_prayer_entered_body">%1$s (%2$s) vakti girdi. Allah kabul etsin.</string>
+    <string name="notif_test_title">Test Bildirimi — Ezan Vaktim</string>
+    <string name="notif_test_body">Bildirim ve ses ayarlarınız sorunsuz çalışıyor.</string>
+</resources>
