@@ -114,8 +114,46 @@ class PrayerAlarmScheduler(private val context: Context) {
         }
     }
 
+    fun scheduleNextCountdownRefresh(nowMillis: Long = System.currentTimeMillis()) {
+        val intent = Intent(context, CountdownNotificationReceiver::class.java).apply {
+            action = CountdownNotificationReceiver.ACTION_REFRESH_COUNTDOWN
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            COUNTDOWN_REFRESH_REQUEST_CODE,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        // Schedule next refresh aligned to the start of the next minute
+        val nextMinuteMillis = ((nowMillis / 60_000L) + 1L) * 60_000L
+        runCatching {
+            alarmManager.setAndAllowWhileIdle(
+                AlarmManager.RTC,
+                nextMinuteMillis,
+                pendingIntent
+            )
+        }
+    }
+
+    fun cancelCountdownRefresh() {
+        val intent = Intent(context, CountdownNotificationReceiver::class.java).apply {
+            action = CountdownNotificationReceiver.ACTION_REFRESH_COUNTDOWN
+        }
+        val existing = PendingIntent.getBroadcast(
+            context,
+            COUNTDOWN_REFRESH_REQUEST_CODE,
+            intent,
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        )
+        if (existing != null) {
+            alarmManager.cancel(existing)
+            existing.cancel()
+        }
+    }
+
     companion object {
         private const val TAG = "PrayerAlarmScheduler"
         private const val MAX_DAYS_TO_SCHEDULE = 7
+        private const val COUNTDOWN_REFRESH_REQUEST_CODE = 888
     }
 }

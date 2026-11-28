@@ -40,4 +40,13 @@ object NetworkClient {
             .build()
             .create(AladhanApiService::class.java)
     }
+
+    val nominatimApi: NominatimApiService by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://nominatim.openstreetmap.org/")
+            .client(okHttpClient)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+            .create(NominatimApiService::class.java)
+    }
 }

@@ -1,0 +1,65 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- Soft warm circular halo behind Kaaba -->
+    <path
+        android:fillColor="#FFF8E7"
+        android:pathData="M24,24m-22,0a22,22 0,1 1,44 0a22,22 0,1 1,-44 0" />
+
+    <!-- Hijr Ismail / Hatim semi-circular marble base -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M11,35.5C11,39.2 16.8,41.5 24,41.5C31.2,41.5 37,39.2 37,35.5"
+        android:strokeWidth="2.0"
+        android:strokeColor="#C69C2B"
+        android:strokeLineCap="round" />
+
+    <!-- Roof of the Kaaba -->
+    <path
+        android:fillColor="#2D3138"
+        android:pathData="M24,8L38,14.5L24,20.5L10,14.5Z" />
+
+    <!-- Left wall (dark Kiswah) -->
+    <path
+        android:fillColor="#111316"
+        android:pathData="M10,14.5L24,20.5L24,37L10,31Z" />
+
+    <!-- Right wall (slightly lighter Kiswah for 3D depth) -->
+    <path
+        android:fillColor="#1E2228"
+        android:pathData="M24,20.5L38,14.5L38,31L24,37Z" />
+
+    <!-- Gold Kiswah Band (Hizam) - Left face -->
+    <path
+        android:fillColor="#E5B942"
+        android:pathData="M10,18.7L24,24.7L24,27.3L10,21.3Z" />
+
+    <!-- Gold Kiswah Band (Hizam) - Right face -->
+    <path
+        android:fillColor="#F2CE63"
+        android:pathData="M24,24.7L38,18.7L38,21.3L24,27.3Z" />
+
+    <!-- Gold Kiswah Decorative Trim Dots/Panels on left face -->
+    <path
+        android:fillColor="#E5B942"
+        android:pathData="M13.5,24.2L15.5,25.1L15.5,26.8L13.5,25.9Z" />
+    <path
+        android:fillColor="#E5B942"
+        android:pathData="M18.5,26.4L20.5,27.3L20.5,29.0L18.5,28.1Z" />
+
+    <!-- Gold Kaaba Door (Bab al-Kaaba) on right face -->
+    <path
+        android:fillColor="#E5B942"
+        android:pathData="M29,28.5L33.5,26.6L33.5,33.1L29,35.0Z" />
+
+    <!-- Crisp gold outline on cube top -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M24,8L38,14.5L38,31L24,37L10,31L10,14.5Z"
+        android:strokeWidth="1.2"
+        android:strokeColor="#C69C2B"
+        android:strokeLineJoin="round" />
+</vector>

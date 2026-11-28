@@ -26,14 +26,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Alarm
+import androidx.compose.material.icons.rounded.AudioFile
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.StopCircle
+import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -73,9 +78,13 @@ fun SettingsScreen(
     preferences: NotificationPreferences,
     permissions: PermissionStatusUi,
     isSoundPlaying: Boolean,
-    hasCustomEzanFile: Boolean,
+    hasBundledCustomEzanFile: Boolean,
+    customAudioStatus: String?,
     onSelectSoundType: (SoundType) -> Unit,
     onTogglePrayer: (PrayerType, Boolean) -> Unit,
+    onTogglePersistentCountdown: (Boolean) -> Unit,
+    onPickCustomAudio: (Uri) -> Unit,
+    onClearCustomAudio: () -> Unit,
     onTestNotification: () -> Unit,
     onStopSound: () -> Unit,
     onRefreshPermissions: () -> Unit,
@@ -100,10 +109,24 @@ fun SettingsScreen(
         onRefreshPermissions()
     }
 
+    val locationPermLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        onRefreshPermissions()
+    }
+
     val settingsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) {
         onRefreshPermissions()
+    }
+
+    val audioPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            onPickCustomAudio(uri)
+        }
     }
 
     Box(
@@ -147,6 +170,29 @@ fun SettingsScreen(
                             }
                             settingsLauncher.launch(intent)
                         }
+                    },
+                    onRequestLocation = {
+                        locationPermLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_COARSE_LOCATION,
+                                Manifest.permission.ACCESS_FINE_LOCATION
+                            )
+                        )
+                    }
+                )
+            }
+
+            // 1b. Persistent Status Bar Countdown Toggle Card
+            item {
+                PersistentCountdownCard(
+                    enabled = preferences.persistentCountdownEnabled,
+                    onToggle = { enabled ->
+                        if (enabled && !permissions.hasNotificationPermission &&
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                        ) {
+                            notificationPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                        onTogglePersistentCountdown(enabled)
                     }
                 )
             }
@@ -155,9 +201,15 @@ fun SettingsScreen(
             item {
                 SoundAndTestCard(
                     selectedSound = preferences.soundType,
+                    customSoundName = preferences.customSoundName,
                     isSoundPlaying = isSoundPlaying,
-                    hasCustomEzanFile = hasCustomEzanFile,
+                    hasBundledCustomEzanFile = hasBundledCustomEzanFile,
+                    customAudioStatus = customAudioStatus,
                     onSelectSoundType = onSelectSoundType,
+                    onPickCustomAudioClick = {
+                        audioPickerLauncher.launch(arrayOf("audio/*"))
+                    },
+                    onClearCustomAudioClick = onClearCustomAudio,
                     onTestNotification = {
                         if (!permissions.hasNotificationPermission &&
                             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
@@ -180,7 +232,10 @@ fun SettingsScreen(
 
             // 4. Custom MP3 guidance card
             item {
-                CustomEzanGuideCard(hasCustomEzanFile = hasCustomEzanFile)
+                CustomEzanGuideCard(
+                    customSoundName = preferences.customSoundName,
+                    hasBundledCustomEzanFile = hasBundledCustomEzanFile
+                )
             }
 
             item {
@@ -194,7 +249,8 @@ fun SettingsScreen(
 private fun PermissionsCard(
     permissions: PermissionStatusUi,
     onRequestNotification: () -> Unit,
-    onRequestExactAlarm: () -> Unit
+    onRequestExactAlarm: () -> Unit,
+    onRequestLocation: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -250,6 +306,68 @@ private fun PermissionsCard(
                 actionLabel = stringResource(R.string.action_open_settings),
                 buttonTestTag = "grant_exact_alarm_button",
                 onAction = onRequestExactAlarm
+            )
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+            PermissionStatusRow(
+                icon = Icons.Rounded.LocationOn,
+                title = stringResource(R.string.settings_location_perm_title),
+                description = if (permissions.hasLocationPermission) {
+                    stringResource(R.string.settings_location_perm_desc_granted)
+                } else {
+                    stringResource(R.string.settings_location_perm_desc_denied)
+                },
+                granted = permissions.hasLocationPermission,
+                actionLabel = stringResource(R.string.action_grant_permission),
+                buttonTestTag = "grant_location_permission_button",
+                onAction = onRequestLocation
+            )
+        }
+    }
+}
+
+@Composable
+private fun PersistentCountdownCard(
+    enabled: Boolean,
+    onToggle: (Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onToggle(!enabled) }
+                .minimumInteractiveComponentSize()
+                .padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Timer,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.settings_persistent_bar_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = stringResource(R.string.settings_persistent_bar_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = enabled,
+                onCheckedChange = onToggle,
+                modifier = Modifier.testTag("switch_persistent_countdown")
             )
         }
     }
@@ -315,9 +433,13 @@ private fun PermissionStatusRow(
 @Composable
 private fun SoundAndTestCard(
     selectedSound: SoundType,
+    customSoundName: String?,
     isSoundPlaying: Boolean,
-    hasCustomEzanFile: Boolean,
+    hasBundledCustomEzanFile: Boolean,
+    customAudioStatus: String?,
     onSelectSoundType: (SoundType) -> Unit,
+    onPickCustomAudioClick: () -> Unit,
+    onClearCustomAudioClick: () -> Unit,
     onTestNotification: () -> Unit,
     onStopSound: () -> Unit
 ) {
@@ -357,17 +479,109 @@ private fun SoundAndTestCard(
 
             SoundOptionRow(
                 title = stringResource(R.string.sound_type_ezan),
-                subtitle = if (hasCustomEzanFile) {
-                    "Özel res/raw/ezan_ozel.mp3 dosyanız aktif."
-                } else {
-                    stringResource(R.string.sound_type_ezan_desc)
+                subtitle = when {
+                    !customSoundName.isNullOrBlank() -> "Özel dosya aktif: $customSoundName"
+                    hasBundledCustomEzanFile -> "Paket içi res/raw/ezan_ozel.mp3 aktif."
+                    else -> stringResource(R.string.sound_type_ezan_desc)
                 },
                 selected = selectedSound == SoundType.EZAN,
                 tag = "sound_option_ezan",
                 onClick = { onSelectSoundType(SoundType.EZAN) }
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            // Pick custom MP3 / audio from device storage (zero-permission OpenDocument)
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        FilledTonalButton(
+                            onClick = onPickCustomAudioClick,
+                            modifier = Modifier
+                                .weight(1f)
+                                .minimumInteractiveComponentSize()
+                                .testTag("pick_custom_sound_button"),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.FolderOpen,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.action_pick_custom_audio),
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                    }
+
+                    if (!customSoundName.isNullOrBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.AudioFile,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = stringResource(R.string.custom_audio_active_label, customSoundName),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedButton(
+                                    onClick = onClearCustomAudioClick,
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                    modifier = Modifier
+                                        .minimumInteractiveComponentSize()
+                                        .testTag("clear_custom_sound_button")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.DeleteOutline,
+                                        contentDescription = stringResource(R.string.action_remove_custom_audio),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Kaldır",
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (!customAudioStatus.isNullOrBlank()) {
+                        Text(
+                            text = customAudioStatus,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(2.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -578,7 +792,10 @@ private fun PrayerTogglesCard(
 }
 
 @Composable
-private fun CustomEzanGuideCard(hasCustomEzanFile: Boolean) {
+private fun CustomEzanGuideCard(
+    customSoundName: String?,
+    hasBundledCustomEzanFile: Boolean
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
@@ -605,10 +822,12 @@ private fun CustomEzanGuideCard(hasCustomEzanFile: Boolean) {
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = if (hasCustomEzanFile) {
-                        "Özel ezan_ozel.mp3 dosyanız başarıyla algılandı ve aktif durumda."
-                    } else {
-                        stringResource(R.string.settings_custom_mp3_body)
+                    text = when {
+                        !customSoundName.isNullOrBlank() ->
+                            "Telefondan seçtiğiniz \"$customSoundName\" dosyası şu anda ezan sesi olarak aktif."
+                        hasBundledCustomEzanFile ->
+                            "Paket içi res/raw/ezan_ozel.mp3 dosyanız aktif durumda. İsterseniz yukarıdan telefondaki başka bir dosyayı da seçebilirsiniz."
+                        else -> stringResource(R.string.settings_custom_mp3_body)
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant

@@ -17,8 +17,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTimeFilled
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -31,7 +35,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -43,15 +51,29 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.ui.PrayerViewModel
 import com.example.ui.screens.HomeScreen
+import com.example.ui.screens.ImsakiyeScreen
 import com.example.ui.screens.LocationPickerScreen
+import com.example.ui.screens.QiblaScreen
 import com.example.ui.screens.SettingsScreen
 import com.example.ui.theme.EzanVaktimTheme
 
 object AppRoutes {
     const val HOME = "home"
+    const val IMSAKIYE = "imsakiye"
+    const val QIBLA = "qibla"
     const val SETTINGS = "settings"
     const val LOCATIONS = "locations"
 }
+
+private enum class PendingLocationTarget { NONE, DETECT_CITY, QIBLA_GPS }
+
+private data class TopNavItem(
+    val route: String,
+    val labelRes: Int,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector,
+    val testTag: String
+)
 
 class MainActivity : ComponentActivity() {
 
@@ -81,13 +103,39 @@ private fun EzanVaktimRoot(viewModel: PrayerViewModel) {
     val preferences by viewModel.preferencesState.collectAsStateWithLifecycle()
     val permissions by viewModel.permissionsUiState.collectAsStateWithLifecycle()
     val isSoundPlaying by viewModel.isSoundPlaying.collectAsStateWithLifecycle()
+    val customAudioStatus by viewModel.customAudioStatus.collectAsStateWithLifecycle()
+    val isDetectingLocation by viewModel.isDetectingLocation.collectAsStateWithLifecycle()
+    val locationDetectMessage by viewModel.locationDetectMessage.collectAsStateWithLifecycle()
     val locationPickerState by viewModel.locationPickerUiState.collectAsStateWithLifecycle()
+    val monthlyPrayerDays by viewModel.monthlyPrayerDaysState.collectAsStateWithLifecycle()
+    val qiblaState by viewModel.qiblaUiState.collectAsStateWithLifecycle()
 
-    // Request POST_NOTIFICATIONS smoothly on Android 13+ if not yet granted
+    var pendingLocationTarget by remember { mutableStateOf(PendingLocationTarget.NONE) }
+
     val notificationLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) {
         viewModel.refreshPermissions()
+    }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { result ->
+        viewModel.refreshPermissions()
+        val granted = result.values.any { it }
+        if (granted) {
+            when (pendingLocationTarget) {
+                PendingLocationTarget.QIBLA_GPS -> viewModel.refreshQiblaGps()
+                PendingLocationTarget.DETECT_CITY, PendingLocationTarget.NONE -> {
+                    viewModel.detectCurrentLocation {
+                        if (currentRoute == AppRoutes.LOCATIONS) {
+                            navController.popBackStack()
+                        }
+                    }
+                }
+            }
+        }
+        pendingLocationTarget = PendingLocationTarget.NONE
     }
 
     LaunchedEffect(Unit) {
@@ -98,7 +146,50 @@ private fun EzanVaktimRoot(viewModel: PrayerViewModel) {
         }
     }
 
+    val topNavItems = remember {
+        listOf(
+            TopNavItem(
+                route = AppRoutes.HOME,
+                labelRes = R.string.nav_prayer_times,
+                selectedIcon = Icons.Filled.AccessTimeFilled,
+                unselectedIcon = Icons.Outlined.AccessTime,
+                testTag = "nav_home_tab"
+            ),
+            TopNavItem(
+                route = AppRoutes.IMSAKIYE,
+                labelRes = R.string.nav_imsakiye,
+                selectedIcon = Icons.Filled.CalendarMonth,
+                unselectedIcon = Icons.Outlined.CalendarMonth,
+                testTag = "nav_imsakiye_tab"
+            ),
+            TopNavItem(
+                route = AppRoutes.QIBLA,
+                labelRes = R.string.nav_qibla,
+                selectedIcon = Icons.Filled.Explore,
+                unselectedIcon = Icons.Outlined.Explore,
+                testTag = "nav_qibla_tab"
+            ),
+            TopNavItem(
+                route = AppRoutes.SETTINGS,
+                labelRes = R.string.nav_settings,
+                selectedIcon = Icons.Filled.Settings,
+                unselectedIcon = Icons.Outlined.Settings,
+                testTag = "nav_settings_tab"
+            )
+        )
+    }
+
     val showBottomOrRailNav = currentRoute != AppRoutes.LOCATIONS
+
+    fun navigateTopTab(route: String) {
+        navController.navigate(route) {
+            popUpTo(navController.graph.findStartDestination().id) {
+                saveState = true
+            }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val useNavigationRail = maxWidth >= 700.dp
@@ -110,54 +201,21 @@ private fun EzanVaktimRoot(viewModel: PrayerViewModel) {
             bottomBar = {
                 if (showBottomOrRailNav && !useNavigationRail) {
                     NavigationBar {
-                        NavigationBarItem(
-                            selected = currentRoute == AppRoutes.HOME,
-                            onClick = {
-                                navController.navigate(AppRoutes.HOME) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = if (currentRoute == AppRoutes.HOME) {
-                                        Icons.Filled.AccessTimeFilled
-                                    } else {
-                                        Icons.Outlined.AccessTime
-                                    },
-                                    contentDescription = stringResource(R.string.nav_prayer_times)
-                                )
-                            },
-                            label = { Text(stringResource(R.string.nav_prayer_times)) },
-                            modifier = Modifier.testTag("nav_home_tab")
-                        )
-                        NavigationBarItem(
-                            selected = currentRoute == AppRoutes.SETTINGS,
-                            onClick = {
-                                navController.navigate(AppRoutes.SETTINGS) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = if (currentRoute == AppRoutes.SETTINGS) {
-                                        Icons.Filled.Settings
-                                    } else {
-                                        Icons.Outlined.Settings
-                                    },
-                                    contentDescription = stringResource(R.string.nav_settings)
-                                )
-                            },
-                            label = { Text(stringResource(R.string.nav_settings)) },
-                            modifier = Modifier.testTag("nav_settings_tab")
-                        )
+                        topNavItems.forEach { item ->
+                            val selected = currentRoute == item.route
+                            NavigationBarItem(
+                                selected = selected,
+                                onClick = { navigateTopTab(item.route) },
+                                icon = {
+                                    Icon(
+                                        imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                                        contentDescription = stringResource(item.labelRes)
+                                    )
+                                },
+                                label = { Text(stringResource(item.labelRes)) },
+                                modifier = Modifier.testTag(item.testTag)
+                            )
+                        }
                     }
                 }
             }
@@ -169,52 +227,21 @@ private fun EzanVaktimRoot(viewModel: PrayerViewModel) {
             ) {
                 if (showBottomOrRailNav && useNavigationRail) {
                     NavigationRail {
-                        NavigationRailItem(
-                            selected = currentRoute == AppRoutes.HOME,
-                            onClick = {
-                                navController.navigate(AppRoutes.HOME) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = if (currentRoute == AppRoutes.HOME) {
-                                        Icons.Filled.AccessTimeFilled
-                                    } else {
-                                        Icons.Outlined.AccessTime
-                                    },
-                                    contentDescription = stringResource(R.string.nav_prayer_times)
-                                )
-                            },
-                            label = { Text(stringResource(R.string.nav_prayer_times)) }
-                        )
-                        NavigationRailItem(
-                            selected = currentRoute == AppRoutes.SETTINGS,
-                            onClick = {
-                                navController.navigate(AppRoutes.SETTINGS) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = if (currentRoute == AppRoutes.SETTINGS) {
-                                        Icons.Filled.Settings
-                                    } else {
-                                        Icons.Outlined.Settings
-                                    },
-                                    contentDescription = stringResource(R.string.nav_settings)
-                                )
-                            },
-                            label = { Text(stringResource(R.string.nav_settings)) }
-                        )
+                        topNavItems.forEach { item ->
+                            val selected = currentRoute == item.route
+                            NavigationRailItem(
+                                selected = selected,
+                                onClick = { navigateTopTab(item.route) },
+                                icon = {
+                                    Icon(
+                                        imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                                        contentDescription = stringResource(item.labelRes)
+                                    )
+                                },
+                                label = { Text(stringResource(item.labelRes)) },
+                                modifier = Modifier.testTag(item.testTag)
+                            )
+                        }
                     }
                 }
 
@@ -226,10 +253,26 @@ private fun EzanVaktimRoot(viewModel: PrayerViewModel) {
                     composable(AppRoutes.HOME) {
                         HomeScreen(
                             uiState = homeState,
+                            isDetectingLocation = isDetectingLocation,
+                            locationDetectMessage = locationDetectMessage,
                             onOpenLocationPicker = {
                                 viewModel.openLocationPicker()
                                 navController.navigate(AppRoutes.LOCATIONS)
                             },
+                            onDetectLocationClick = {
+                                if (permissions.hasLocationPermission) {
+                                    viewModel.detectCurrentLocation()
+                                } else {
+                                    pendingLocationTarget = PendingLocationTarget.DETECT_CITY
+                                    locationPermissionLauncher.launch(
+                                        arrayOf(
+                                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                                            Manifest.permission.ACCESS_FINE_LOCATION
+                                        )
+                                    )
+                                }
+                            },
+                            onDismissLocationMessage = { viewModel.clearLocationDetectMessage() },
                             onRefresh = { viewModel.refreshPrayerTimes() },
                             onTogglePrayerBell = { type, enabled ->
                                 viewModel.togglePrayerEnabled(type, enabled)
@@ -238,16 +281,51 @@ private fun EzanVaktimRoot(viewModel: PrayerViewModel) {
                         )
                     }
 
+                    composable(AppRoutes.IMSAKIYE) {
+                        ImsakiyeScreen(
+                            location = homeState.location,
+                            monthlyDays = monthlyPrayerDays,
+                            isRefreshing = homeState.isRefreshing,
+                            onRefresh = { viewModel.refreshPrayerTimes() }
+                        )
+                    }
+
+                    composable(AppRoutes.QIBLA) {
+                        QiblaScreen(
+                            qiblaState = qiblaState,
+                            hasLocationPermission = permissions.hasLocationPermission,
+                            onRequestLocationAndRefresh = {
+                                if (permissions.hasLocationPermission) {
+                                    viewModel.refreshQiblaGps()
+                                } else {
+                                    pendingLocationTarget = PendingLocationTarget.QIBLA_GPS
+                                    locationPermissionLauncher.launch(
+                                        arrayOf(
+                                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                                            Manifest.permission.ACCESS_FINE_LOCATION
+                                        )
+                                    )
+                                }
+                            }
+                        )
+                    }
+
                     composable(AppRoutes.SETTINGS) {
                         SettingsScreen(
                             preferences = preferences,
                             permissions = permissions,
                             isSoundPlaying = isSoundPlaying,
-                            hasCustomEzanFile = viewModel.hasCustomEzanFile,
+                            hasBundledCustomEzanFile = viewModel.hasBundledCustomEzanFile,
+                            customAudioStatus = customAudioStatus,
                             onSelectSoundType = { viewModel.selectSoundType(it) },
                             onTogglePrayer = { type, enabled ->
                                 viewModel.togglePrayerEnabled(type, enabled)
                             },
+                            onTogglePersistentCountdown = { enabled ->
+                                viewModel.togglePersistentCountdown(enabled)
+                            },
+                            onPickCustomAudio = { uri -> viewModel.importCustomAudio(uri) },
+                            onClearCustomAudio = { viewModel.clearCustomAudio() },
                             onTestNotification = { viewModel.sendTestNotification() },
                             onStopSound = { viewModel.stopSound() },
                             onRefreshPermissions = { viewModel.refreshPermissions() }
@@ -257,11 +335,36 @@ private fun EzanVaktimRoot(viewModel: PrayerViewModel) {
                     composable(AppRoutes.LOCATIONS) {
                         LocationPickerScreen(
                             uiState = locationPickerState,
+                            isDetectingLocation = isDetectingLocation,
+                            locationDetectMessage = locationDetectMessage,
+                            onDetectLocationClick = {
+                                if (permissions.hasLocationPermission) {
+                                    viewModel.detectCurrentLocation {
+                                        navController.popBackStack()
+                                    }
+                                } else {
+                                    pendingLocationTarget = PendingLocationTarget.DETECT_CITY
+                                    locationPermissionLauncher.launch(
+                                        arrayOf(
+                                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                                            Manifest.permission.ACCESS_FINE_LOCATION
+                                        )
+                                    )
+                                }
+                            },
+                            onModeChange = { viewModel.setLocationPickerMode(it) },
                             onSearchQueryChange = { viewModel.updateLocationSearchQuery(it) },
+                            onSearchVillagesNow = { viewModel.searchVillagesNow() },
+                            onSwitchToVillageSearch = { viewModel.switchToVillageSearchWithQuery(it) },
                             onSelectCountry = { viewModel.selectCountry(it) },
                             onSelectCity = { viewModel.selectCity(it) },
                             onSelectDistrict = { district ->
                                 viewModel.selectDistrict(district) {
+                                    navController.popBackStack()
+                                }
+                            },
+                            onSelectPlaceResult = { place ->
+                                viewModel.selectPlaceSearchResult(place) {
                                     navController.popBackStack()
                                 }
                             },

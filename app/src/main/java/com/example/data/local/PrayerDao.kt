@@ -12,6 +12,9 @@ interface PrayerDao {
     @Query("SELECT * FROM prayer_days WHERE districtId = :districtId AND isoDate >= :fromIsoDate ORDER BY isoDate ASC")
     fun observeUpcomingPrayerDays(districtId: String, fromIsoDate: String): Flow<List<PrayerDayEntity>>
 
+    @Query("SELECT * FROM prayer_days WHERE districtId = :districtId ORDER BY isoDate ASC")
+    fun observeAllPrayerDays(districtId: String): Flow<List<PrayerDayEntity>>
+
     @Query("SELECT * FROM prayer_days WHERE districtId = :districtId AND isoDate >= :fromIsoDate ORDER BY isoDate ASC LIMIT :limit")
     suspend fun getUpcomingPrayerDays(districtId: String, fromIsoDate: String, limit: Int): List<PrayerDayEntity>
 

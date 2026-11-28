@@ -33,18 +33,40 @@ data class SelectedLocation(
     val cityId: String = "539",
     val cityName: String = "İSTANBUL",
     val districtId: String = "9541",
-    val districtName: String = "KADIKÖY"
+    val districtName: String = "KADIKÖY",
+    val latitude: Double? = null,
+    val longitude: Double? = null
 ) {
+    fun hasExactCoordinates(): Boolean = latitude != null && longitude != null
+
     fun formattedDisplay(): String {
         val cityPretty = cityName.toTurkishTitleCase()
         val districtPretty = districtName.toTurkishTitleCase()
-        return if (cityPretty.equals(districtPretty, ignoreCase = true)) {
+        return if (cityPretty.isBlank()) {
+            districtPretty
+        } else if (cityPretty.equals(districtPretty, ignoreCase = true)) {
             cityPretty
         } else {
             "$cityPretty • $districtPretty"
         }
     }
+
+    companion object {
+        fun coordinateDistrictId(latitude: Double, longitude: Double): String {
+            return String.format(java.util.Locale.US, "geo_%.4f_%.4f", latitude, longitude)
+        }
+    }
 }
+
+data class PlaceSearchResult(
+    val id: String,
+    val primaryName: String,
+    val cityOrRegion: String,
+    val countryName: String,
+    val subtitle: String,
+    val latitude: Double,
+    val longitude: Double
+)
 
 data class PrayerDay(
     val districtId: String,
@@ -93,7 +115,9 @@ data class DistrictOption(
 
 data class NotificationPreferences(
     val soundType: SoundType = SoundType.SHORT_NOTIFICATION,
-    val enabledPrayers: Map<PrayerType, Boolean> = PrayerType.entries.associateWith { true }
+    val enabledPrayers: Map<PrayerType, Boolean> = PrayerType.entries.associateWith { true },
+    val customSoundName: String? = null,
+    val persistentCountdownEnabled: Boolean = true
 ) {
     fun isEnabled(type: PrayerType): Boolean = enabledPrayers[type] ?: true
 }
@@ -102,6 +126,7 @@ data class PrayerCountdownStatus(
     val currentPrayer: PrayerType,
     val nextPrayer: PrayerType,
     val nextPrayerTimeText: String,
+    val nextPrayerTriggerMillis: Long,
     val isNextTomorrow: Boolean,
     val remainingMillis: Long,
     val intervalProgress: Float

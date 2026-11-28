@@ -33,6 +33,7 @@ import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.NightsStay
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.StopCircle
@@ -81,7 +82,11 @@ import com.example.ui.theme.HeroGradientStart
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
+    isDetectingLocation: Boolean,
+    locationDetectMessage: String?,
     onOpenLocationPicker: () -> Unit,
+    onDetectLocationClick: () -> Unit,
+    onDismissLocationMessage: () -> Unit,
     onRefresh: () -> Unit,
     onTogglePrayerBell: (PrayerType, Boolean) -> Unit,
     onStopSound: () -> Unit,
@@ -103,9 +108,43 @@ fun HomeScreen(
             item {
                 HeroCountdownCard(
                     uiState = uiState,
+                    isDetectingLocation = isDetectingLocation,
                     onOpenLocationPicker = onOpenLocationPicker,
+                    onDetectLocationClick = onDetectLocationClick,
                     onRefresh = onRefresh
                 )
+            }
+
+            if (locationDetectMessage != null) {
+                item {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onDismissLocationMessage() }
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.MyLocation,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = locationDetectMessage,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
             }
 
             if (uiState.isSoundPlaying) {
@@ -196,7 +235,9 @@ fun HomeScreen(
 @Composable
 private fun HeroCountdownCard(
     uiState: HomeUiState,
+    isDetectingLocation: Boolean,
     onOpenLocationPicker: () -> Unit,
+    onDetectLocationClick: () -> Unit,
     onRefresh: () -> Unit
 ) {
     val countdown = uiState.countdown
@@ -293,29 +334,61 @@ private fun HeroCountdownCard(
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.White.copy(alpha = 0.14f)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(
-                            onClick = onRefresh,
-                            enabled = !uiState.isRefreshing,
-                            modifier = Modifier
-                                .size(48.dp)
-                                .testTag("refresh_button")
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.White.copy(alpha = 0.14f)
                         ) {
-                            if (uiState.isRefreshing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    color = GoldAccent,
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Rounded.Refresh,
-                                    contentDescription = stringResource(R.string.action_refresh),
-                                    tint = Color.White
-                                )
+                            IconButton(
+                                onClick = onDetectLocationClick,
+                                enabled = !isDetectingLocation,
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .testTag("home_gps_button")
+                            ) {
+                                if (isDetectingLocation) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        color = GoldAccent,
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Rounded.MyLocation,
+                                        contentDescription = stringResource(R.string.action_detect_location),
+                                        tint = GoldAccent
+                                    )
+                                }
+                            }
+                        }
+
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.White.copy(alpha = 0.14f)
+                        ) {
+                            IconButton(
+                                onClick = onRefresh,
+                                enabled = !uiState.isRefreshing,
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .testTag("refresh_button")
+                            ) {
+                                if (uiState.isRefreshing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        color = GoldAccent,
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Refresh,
+                                        contentDescription = stringResource(R.string.action_refresh),
+                                        tint = Color.White
+                                    )
+                                }
                             }
                         }
                     }

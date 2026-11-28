@@ -14,6 +14,9 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.MainActivity
 import com.example.R
+import com.example.domain.PrayerDay
+import com.example.domain.PrayerTimeCalculator
+import com.example.domain.SelectedLocation
 
 class NotificationHelper(private val context: Context) {
 
@@ -27,7 +30,7 @@ class NotificationHelper(private val context: Context) {
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
             description = context.getString(R.string.notif_channel_ezan_desc)
-            setSound(null, null) // Sound is handled cleanly by SoundPlayerManager / EzanPlaybackService
+            setSound(null, null)
             enableVibration(true)
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         }
@@ -38,13 +41,83 @@ class NotificationHelper(private val context: Context) {
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
             description = context.getString(R.string.notif_channel_short_desc)
-            setSound(null, null) // Sound is controlled via SoundPlayerManager so Stop button works everywhere
+            setSound(null, null)
             enableVibration(true)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+        }
+
+        val countdownChannel = NotificationChannel(
+            CHANNEL_COUNTDOWN_ID,
+            context.getString(R.string.notif_channel_countdown_name),
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = context.getString(R.string.notif_channel_countdown_desc)
+            setSound(null, null)
+            enableVibration(false)
+            setShowBadge(false)
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         }
 
         manager.createNotificationChannel(ezanChannel)
         manager.createNotificationChannel(shortChannel)
+        manager.createNotificationChannel(countdownChannel)
+    }
+
+    fun updateCountdownNotification(
+        days: List<PrayerDay>,
+        location: SelectedLocation,
+        enabled: Boolean,
+        nowMillis: Long = System.currentTimeMillis()
+    ) {
+        if (!enabled || !hasNotificationPermission()) {
+            cancelCountdownNotification()
+            return
+        }
+
+        val todayIso = PrayerTimeCalculator.todayIsoDate(nowMillis)
+        val tomorrowIso = PrayerTimeCalculator.tomorrowIsoDate(nowMillis)
+        val today = days.firstOrNull { it.isoDate == todayIso } ?: days.firstOrNull() ?: return
+        val tomorrow = days.firstOrNull { it.isoDate == tomorrowIso }
+
+        val status = PrayerTimeCalculator.computeStatus(today, tomorrow, nowMillis) ?: return
+        ensureChannels()
+
+        val remainingFormatted = PrayerTimeCalculator.formatHoursMinutesTurkish(status.remainingMillis)
+        val title = "${status.nextPrayer.displayName} • ${status.nextPrayerTimeText} (${location.formattedDisplay()})"
+        val body = "${status.nextPrayer.displayName} vaktine $remainingFormatted kaldı"
+
+        val contentIntent = PendingIntent.getActivity(
+            context,
+            10,
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_COUNTDOWN_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setSubText(location.formattedDisplay())
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setSilent(true)
+            .setShowWhen(true)
+            .setWhen(status.nextPrayerTriggerMillis)
+            .setUsesChronometer(true)
+            .setChronometerCountDown(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setContentIntent(contentIntent)
+            .build()
+
+        postNotification(COUNTDOWN_NOTIFICATION_ID, notification)
+    }
+
+    fun cancelCountdownNotification() {
+        NotificationManagerCompat.from(context).cancel(COUNTDOWN_NOTIFICATION_ID)
     }
 
     fun buildPrayerNotification(
@@ -120,6 +193,8 @@ class NotificationHelper(private val context: Context) {
     companion object {
         const val CHANNEL_EZAN_ID = "prayer_alarm_ezan_channel"
         const val CHANNEL_SHORT_ID = "prayer_alarm_short_channel"
+        const val CHANNEL_COUNTDOWN_ID = "prayer_countdown_bar_channel"
+        const val COUNTDOWN_NOTIFICATION_ID = 1000
         const val TEST_NOTIFICATION_ID = 1099
     }
 }

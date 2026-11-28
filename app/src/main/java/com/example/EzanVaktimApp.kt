@@ -5,6 +5,7 @@ import com.example.alarm.NotificationHelper
 import com.example.alarm.PrayerAlarmScheduler
 import com.example.alarm.SoundPlayerManager
 import com.example.data.local.PrayerDatabase
+import com.example.data.location.DeviceLocationDetector
 import com.example.data.preferences.UserPreferencesRepository
 import com.example.data.remote.NetworkClient
 import com.example.data.repository.PrayerTimesRepository
@@ -15,8 +16,10 @@ class AppContainer(application: Application) {
     val prayerTimesRepository = PrayerTimesRepository(
         prayerDao = database.prayerDao(),
         diyanetApi = NetworkClient.diyanetApi,
-        aladhanApi = NetworkClient.aladhanApi
+        aladhanApi = NetworkClient.aladhanApi,
+        nominatimApi = NetworkClient.nominatimApi
     )
+    val locationDetector = DeviceLocationDetector(application, prayerTimesRepository)
     val notificationHelper = NotificationHelper(application)
     val soundPlayerManager = SoundPlayerManager(application)
     val alarmScheduler = PrayerAlarmScheduler(application)

@@ -5,12 +5,17 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
+import android.provider.OpenableColumns
 import android.util.Log
 import com.example.R
 import com.example.domain.SoundType
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 
 class SoundPlayerManager(private val context: Context) {
 
@@ -93,14 +98,19 @@ class SoundPlayerManager(private val context: Context) {
     private fun createPlayerFor(soundType: SoundType): MediaPlayer {
         return when (soundType) {
             SoundType.EZAN -> {
-                // If user placed custom ezan_ozel.mp3 in res/raw/, prioritize it automatically
-                val customResId = context.resources.getIdentifier(
-                    "ezan_ozel",
-                    "raw",
-                    context.packageName
-                )
-                val targetResId = if (customResId != 0) customResId else R.raw.ezan_ornek
-                createRawPlayer(targetResId)
+                val importedFile = customAudioFile()
+                if (importedFile.exists() && importedFile.length() > 0L) {
+                    createFilePlayer(importedFile)
+                } else {
+                    // If developer placed custom ezan_ozel.mp3 in res/raw/, prioritize it next
+                    val customResId = context.resources.getIdentifier(
+                        "ezan_ozel",
+                        "raw",
+                        context.packageName
+                    )
+                    val targetResId = if (customResId != 0) customResId else R.raw.ezan_ornek
+                    createRawPlayer(targetResId)
+                }
             }
 
             SoundType.SHORT_NOTIFICATION -> {
@@ -139,11 +149,93 @@ class SoundPlayerManager(private val context: Context) {
         }
     }
 
-    fun hasCustomEzanFile(): Boolean {
+    private fun createFilePlayer(file: File): MediaPlayer {
+        return MediaPlayer().apply {
+            setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build()
+            )
+            setDataSource(file.absolutePath)
+            prepare()
+        }
+    }
+
+    suspend fun importCustomAudio(uri: Uri): Result<String> = withContext(Dispatchers.IO) {
+        runCatching {
+            val displayName = resolveDisplayName(uri) ?: "ozel_ezan.mp3"
+            val tempFile = File(context.filesDir, "custom_ezan_audio.tmp")
+            val targetFile = customAudioFile()
+
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(tempFile).use { output ->
+                    input.copyTo(output)
+                }
+            } ?: error("Seçilen ses dosyası açılamadı.")
+
+            if (tempFile.length() <= 0L) {
+                tempFile.delete()
+                error("Seçilen dosya boş görünüyor.")
+            }
+
+            // Validate that Android MediaPlayer can decode this audio file
+            val testPlayer = MediaPlayer()
+            try {
+                testPlayer.setDataSource(tempFile.absolutePath)
+                testPlayer.prepare()
+            } catch (e: Exception) {
+                tempFile.delete()
+                throw IllegalArgumentException("Bu ses formatı desteklenmiyor. Lütfen geçerli bir MP3, WAV veya M4A dosyası seçin.", e)
+            } finally {
+                runCatching { testPlayer.release() }
+            }
+
+            if (targetFile.exists()) {
+                targetFile.delete()
+            }
+            if (!tempFile.renameTo(targetFile)) {
+                tempFile.copyTo(targetFile, overwrite = true)
+                tempFile.delete()
+            }
+
+            displayName
+        }
+    }
+
+    fun clearCustomAudio() {
+        stop()
+        val file = customAudioFile()
+        if (file.exists()) {
+            file.delete()
+        }
+    }
+
+    fun hasCustomAudioFile(): Boolean {
+        val imported = customAudioFile()
+        return (imported.exists() && imported.length() > 0L) || hasBundledCustomEzanFile()
+    }
+
+    fun hasBundledCustomEzanFile(): Boolean {
         return context.resources.getIdentifier("ezan_ozel", "raw", context.packageName) != 0
+    }
+
+    private fun customAudioFile(): File = File(context.filesDir, CUSTOM_AUDIO_FILENAME)
+
+    private fun resolveDisplayName(uri: Uri): String? {
+        return runCatching {
+            context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                ?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        if (idx >= 0) cursor.getString(idx) else null
+                    } else null
+                }
+        }.getOrNull()
     }
 
     companion object {
         private const val TAG = "SoundPlayerManager"
+        private const val CUSTOM_AUDIO_FILENAME = "custom_ezan_audio"
     }
 }

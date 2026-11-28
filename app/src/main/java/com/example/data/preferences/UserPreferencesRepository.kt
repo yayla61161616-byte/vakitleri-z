@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -28,7 +29,11 @@ class UserPreferencesRepository(private val context: Context) {
         val CITY_NAME = stringPreferencesKey("city_name")
         val DISTRICT_ID = stringPreferencesKey("district_id")
         val DISTRICT_NAME = stringPreferencesKey("district_name")
+        val LATITUDE = doublePreferencesKey("location_latitude")
+        val LONGITUDE = doublePreferencesKey("location_longitude")
         val SOUND_TYPE = stringPreferencesKey("sound_type")
+        val CUSTOM_SOUND_NAME = stringPreferencesKey("custom_sound_name")
+        val PERSISTENT_COUNTDOWN_ENABLED = booleanPreferencesKey("persistent_countdown_enabled")
 
         fun prayerEnabled(type: PrayerType) = booleanPreferencesKey("prayer_enabled_${type.key}")
     }
@@ -41,7 +46,9 @@ class UserPreferencesRepository(private val context: Context) {
             cityId = prefs[Keys.CITY_ID] ?: defaultLoc.cityId,
             cityName = prefs[Keys.CITY_NAME] ?: defaultLoc.cityName,
             districtId = prefs[Keys.DISTRICT_ID] ?: defaultLoc.districtId,
-            districtName = prefs[Keys.DISTRICT_NAME] ?: defaultLoc.districtName
+            districtName = prefs[Keys.DISTRICT_NAME] ?: defaultLoc.districtName,
+            latitude = prefs[Keys.LATITUDE],
+            longitude = prefs[Keys.LONGITUDE]
         )
     }
 
@@ -53,7 +60,9 @@ class UserPreferencesRepository(private val context: Context) {
             }
             NotificationPreferences(
                 soundType = soundType,
-                enabledPrayers = enabledMap
+                enabledPrayers = enabledMap,
+                customSoundName = prefs[Keys.CUSTOM_SOUND_NAME],
+                persistentCountdownEnabled = prefs[Keys.PERSISTENT_COUNTDOWN_ENABLED] ?: true
             )
         }
 
@@ -69,6 +78,13 @@ class UserPreferencesRepository(private val context: Context) {
             prefs[Keys.CITY_NAME] = location.cityName
             prefs[Keys.DISTRICT_ID] = location.districtId
             prefs[Keys.DISTRICT_NAME] = location.districtName
+            if (location.latitude != null && location.longitude != null) {
+                prefs[Keys.LATITUDE] = location.latitude
+                prefs[Keys.LONGITUDE] = location.longitude
+            } else {
+                prefs.remove(Keys.LATITUDE)
+                prefs.remove(Keys.LONGITUDE)
+            }
         }
     }
 
@@ -81,6 +97,22 @@ class UserPreferencesRepository(private val context: Context) {
     suspend fun setSoundType(soundType: SoundType) {
         context.prayerPrefsDataStore.edit { prefs ->
             prefs[Keys.SOUND_TYPE] = soundType.key
+        }
+    }
+
+    suspend fun setCustomSoundName(name: String?) {
+        context.prayerPrefsDataStore.edit { prefs ->
+            if (name.isNullOrBlank()) {
+                prefs.remove(Keys.CUSTOM_SOUND_NAME)
+            } else {
+                prefs[Keys.CUSTOM_SOUND_NAME] = name
+            }
+        }
+    }
+
+    suspend fun setPersistentCountdownEnabled(enabled: Boolean) {
+        context.prayerPrefsDataStore.edit { prefs ->
+            prefs[Keys.PERSISTENT_COUNTDOWN_ENABLED] = enabled
         }
     }
 }

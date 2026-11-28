@@ -63,6 +63,15 @@ data class AladhanWeekdayDto(
 )
 
 interface AladhanApiService {
+    @GET("v1/calendar/{year}/{month}")
+    suspend fun getMonthlyByCoordinates(
+        @Path("year") year: Int,
+        @Path("month") month: Int,
+        @Query("latitude") latitude: Double,
+        @Query("longitude") longitude: Double,
+        @Query("method") method: Int = 13 // Method 13 = Diyanet İşleri Başkanlığı, Turkey
+    ): AladhanCalendarResponse
+
     @GET("v1/calendarByCity/{year}/{month}")
     suspend fun getMonthlyByCity(
         @Path("year") year: Int,

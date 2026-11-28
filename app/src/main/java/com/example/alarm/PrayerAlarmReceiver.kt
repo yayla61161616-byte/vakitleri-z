@@ -59,9 +59,17 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                     )
                 }
 
-                // Keep upcoming alarms populated for subsequent days
+                // Keep upcoming alarms and persistent bar populated for subsequent prayers/days
                 val days = container.prayerTimesRepository.getUpcomingPrayerDays(location.districtId, 7)
                 container.alarmScheduler.rescheduleAll(days, prefs, location)
+                container.notificationHelper.updateCountdownNotification(
+                    days = days,
+                    location = location,
+                    enabled = prefs.persistentCountdownEnabled
+                )
+                if (prefs.persistentCountdownEnabled) {
+                    container.alarmScheduler.scheduleNextCountdownRefresh()
+                }
             } catch (_: Exception) {
                 val title = context.getString(R.string.notif_prayer_entered_title, prayerType.displayName)
                 val body = context.getString(R.string.notif_prayer_entered_body, prayerType.displayName, locationLabel)

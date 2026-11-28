@@ -80,6 +80,7 @@ object PrayerTimeCalculator {
                 currentPrayer = current,
                 nextPrayer = next.first,
                 nextPrayerTimeText = next.second,
+                nextPrayerTriggerMillis = next.third,
                 isNextTomorrow = false,
                 remainingMillis = (next.third - nowMillis).coerceAtLeast(0L),
                 intervalProgress = elapsed.toFloat() / span.toFloat()
@@ -99,6 +100,7 @@ object PrayerTimeCalculator {
                 currentPrayer = PrayerType.YATSI,
                 nextPrayer = PrayerType.IMSAK,
                 nextPrayerTimeText = tomorrowImsakText,
+                nextPrayerTriggerMillis = tomorrowImsakMillis,
                 isNextTomorrow = true,
                 remainingMillis = (tomorrowImsakMillis - nowMillis).coerceAtLeast(0L),
                 intervalProgress = elapsed.toFloat() / span.toFloat()
@@ -112,6 +114,18 @@ object PrayerTimeCalculator {
         val minutes = (totalSeconds % 3600L) / 60L
         val seconds = totalSeconds % 60L
         return String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+    }
+
+    fun formatHoursMinutesTurkish(remainingMillis: Long): String {
+        val totalMinutes = ((remainingMillis.coerceAtLeast(0L) + 59_999L) / 60_000L)
+        val hours = totalMinutes / 60L
+        val minutes = totalMinutes % 60L
+        return when {
+            hours > 0L && minutes > 0L -> "$hours saat $minutes dakika"
+            hours > 0L -> "$hours saat"
+            minutes > 0L -> "$minutes dakika"
+            else -> "1 dakikadan az"
+        }
     }
 
     fun convertShortMiladiToIso(miladiShort: String): String? {

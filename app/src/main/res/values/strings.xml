@@ -1,6 +1,8 @@
 <resources>
     <string name="app_name">Ezan Vaktim</string>
     <string name="nav_prayer_times">Vakitler</string>
+    <string name="nav_imsakiye">İmsakiye</string>
+    <string name="nav_qibla">Kıble</string>
     <string name="nav_settings">Ayarlar</string>
 
     <string name="prayer_imsak">İmsak</string>
@@ -40,14 +42,17 @@
     <string name="sound_type_short">Kısa Bildirim Sesi</string>
     <string name="sound_type_short_desc">Sistem varsayılan bildirim sesini çalar.</string>
     <string name="sound_type_ezan">Ezan Sesi</string>
-    <string name="sound_type_ezan_desc">Yerleşik örnek ezan melodisini (veya özel ezan_ozel.mp3) çalar.</string>
+    <string name="sound_type_ezan_desc">Yerleşik örnek ezanı veya telefondan seçtiğiniz özel sesi çalar.</string>
     <string name="sound_playing_banner">Ses çalınıyor…</string>
+    <string name="action_pick_custom_audio">Telefondan Ses Dosyası Seç (MP3)</string>
+    <string name="action_remove_custom_audio">Özel Sesi Kaldır</string>
+    <string name="custom_audio_active_label">Seçili ses: %1$s</string>
 
     <string name="settings_prayer_toggles_title">Vakit Bildirimleri</string>
     <string name="settings_prayer_toggles_subtitle">Her vakit için bildirimi ve alarmı ayrı ayrı yönetin.</string>
 
     <string name="settings_custom_mp3_title">Özel Ezan MP3 Nasıl Eklenir?</string>
-    <string name="settings_custom_mp3_body">Kendi özel ezan dosyanızı app/src/main/res/raw/ezan_ozel.mp3 olarak eklediğinizde uygulama otomatik olarak o sesi çalar. Şu an ilk testte sorunsuz çalışması için yerleşik örnek ezan sesi bağlıdır.</string>
+    <string name="settings_custom_mp3_body">Yukarıdaki "Telefondan Ses Dosyası Seç (MP3)" butonuyla cihazınızdaki herhangi bir MP3, WAV veya M4A dosyasını doğrudan seçebilirsiniz. Geliştirici paketi içine gömmek isterseniz dosyanızı app/src/main/res/raw/ezan_ozel.mp3 konumuna da ekleyebilirsiniz.</string>
 
     <string name="location_picker_title">Konum Seçimi</string>
     <string name="location_step_country">Ülke</string>
@@ -59,8 +64,17 @@
     <string name="notif_channel_ezan_desc">Namaz vakti girdiğinde ezan sesiyle bildirim verir.</string>
     <string name="notif_channel_short_name">Namaz Vakti Bildirimleri</string>
     <string name="notif_channel_short_desc">Namaz vakti girdiğinde kısa bildirim sesiyle uyarır.</string>
+    <string name="notif_channel_countdown_name">Üst Çubuk Vakit Sayacı</string>
+    <string name="notif_channel_countdown_desc">Bildirim çubuğunda sonraki ezana kalan süreyi gösterir.</string>
     <string name="notif_prayer_entered_title">%1$s Vakti Girdi</string>
     <string name="notif_prayer_entered_body">%1$s (%2$s) vakti girdi. Allah kabul etsin.</string>
     <string name="notif_test_title">Test Bildirimi — Ezan Vaktim</string>
     <string name="notif_test_body">Bildirim ve ses ayarlarınız sorunsuz çalışıyor.</string>
+
+    <string name="settings_persistent_bar_title">Üst Bildirim Çubuğunda Canlı Sayaç</string>
+    <string name="settings_persistent_bar_desc">Bildirim çubuğunda sıradaki ezana kaç saat ve dakika kaldığını sürekli gösterir.</string>
+    <string name="settings_location_perm_title">Konum İzni</string>
+    <string name="settings_location_perm_desc_granted">Bulunduğunuz il ve ilçeyi otomatik algılayabilir.</string>
+    <string name="settings_location_perm_desc_denied">Bulunduğunuz şehri GPS ile otomatik seçmek için izin verin.</string>
+    <string name="action_detect_location">GPS ile Konumumu Bul</string>
 </resources>

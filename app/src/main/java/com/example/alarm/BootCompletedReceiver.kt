@@ -28,6 +28,14 @@ class BootCompletedReceiver : BroadcastReceiver() {
                 val prefs = container.preferencesRepository.getNotificationPreferences()
                 val days = container.prayerTimesRepository.getUpcomingPrayerDays(location.districtId, 7)
                 container.alarmScheduler.rescheduleAll(days, prefs, location)
+                container.notificationHelper.updateCountdownNotification(
+                    days = days,
+                    location = location,
+                    enabled = prefs.persistentCountdownEnabled
+                )
+                if (prefs.persistentCountdownEnabled) {
+                    container.alarmScheduler.scheduleNextCountdownRefresh()
+                }
             } finally {
                 pendingResult.finish()
             }
